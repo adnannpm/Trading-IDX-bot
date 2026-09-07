@@ -1,0 +1,1 @@
+agent bot untuk discord channel khusus nusa channel dc, yg berguna untuk verifikasi user di dc saat masuk, mengasih tau inpo saham yg gacor, saham yg diakum bandar, dll

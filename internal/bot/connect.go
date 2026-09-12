@@ -13,12 +13,10 @@ func ConnectBot() error {
 		return err
 	}
 
-	// Register event handlers
 	bot.AddHandler(ReadyHandler)
 	bot.AddHandler(InteractionHandler)
 	bot.AddHandler(MessageHandler)
 
-	// Tentukan intents yang dibutuhkan
 	bot.Identify.Intents = discordgo.IntentsGuilds |
 		discordgo.IntentsGuildMessages |
 		discordgo.IntentsMessageContent

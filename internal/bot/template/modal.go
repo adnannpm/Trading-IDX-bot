@@ -10,7 +10,7 @@ const (
 
 var Button = discordgo.Button{
 	CustomID: ModalButtonCustomID,
-	Label:    "Open Modal",
+	Label:    "Token",
 	Style:    discordgo.PrimaryButton,
 }
 

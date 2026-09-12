@@ -5,6 +5,7 @@ type User struct {
 	DiscordID string `gorm:"uniqueIndex"`
 	Username  string
 	Token	string
+	Status    string
 
 	CreatedAt  int64
 	UpdatedAt  int64

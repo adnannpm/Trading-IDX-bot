@@ -1,6 +1,8 @@
 package database
 
 import (
+	"agent-bot/internal/model"
+
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -13,6 +15,7 @@ func Connect() error {
 		return err
 	}
 
+	_ = db.AutoMigrate(&model.User{})
 	DB = db
 
 	return nil

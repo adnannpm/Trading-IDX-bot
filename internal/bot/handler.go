@@ -7,6 +7,7 @@ import (
 	"agent-bot/internal/service"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -201,6 +202,59 @@ func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if err != nil {
 			log.Printf("Failed to send modal button: %v\n", err)
 		}
+		return
+	}
+
+	if m.Content == "!scan-ara" || m.Content == "!top-ara" {
+		_, _ = s.ChannelMessageSend(m.ChannelID, "🔍 Memindai data Top 10 Saham ARA / Gainers terbaru dari Bursa Efek Indonesia...")
+		sent, err := BroadcastTop10ARA(s, GetTopAraChannelID())
+		if err != nil {
+			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal memindai ARA: %v", err))
+			return
+		}
+		if len(sent) > 0 {
+			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("✅ Berhasil mengirim 1 pesan rangkuman Top %d Saham ARA/Gainers ke channel <#%s>!", len(sent), GetTopAraChannelID()))
+		}
+		return
+	}
+
+	if m.Content == "!scan-arb" || m.Content == "!top-arb" {
+		_, _ = s.ChannelMessageSend(m.ChannelID, "🔍 Memindai data Top 10 Saham ARB / Losers terbaru dari Bursa Efek Indonesia...")
+		sent, err := BroadcastTop10ARB(s, GetTopArbChannelID())
+		if err != nil {
+			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal memindai ARB: %v", err))
+			return
+		}
+		if len(sent) > 0 {
+			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("✅ Berhasil mengirim 1 pesan rangkuman Top %d Saham ARB/Losers ke channel <#%s>!", len(sent), GetTopArbChannelID()))
+		}
+		return
+	}
+
+	if m.Content == "!scan-all" {
+		_, _ = s.ChannelMessageSend(m.ChannelID, "🔍 Memindai data Top 10 Saham ARA dan ARB terbaru dari Bursa Efek Indonesia...")
+		sentAra, errAra := BroadcastTop10ARA(s, GetTopAraChannelID())
+		sentArb, errArb := BroadcastTop10ARB(s, GetTopArbChannelID())
+		if errAra != nil && errArb != nil {
+			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal memindai: ARA (%v), ARB (%v)", errAra, errArb))
+			return
+		}
+		_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("✅ Berhasil memindai pasar!\n• Top %d ARA terkirim ke <#%s>\n• Top %d ARB terkirim ke <#%s>", len(sentAra), GetTopAraChannelID(), len(sentArb), GetTopArbChannelID()))
+		return
+	}
+
+	if strings.HasPrefix(m.Content, "!saham ") {
+		ticker := strings.TrimSpace(strings.TrimPrefix(m.Content, "!saham "))
+		if ticker != "" {
+			quote, err := service.FetchStockQuote(ticker)
+			if err != nil {
+				_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal mengambil data saham `%s`: %v", ticker, err))
+				return
+			}
+			embed := CreateStockEmbed(*quote)
+			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
+		}
+		return
 	}
 }
 

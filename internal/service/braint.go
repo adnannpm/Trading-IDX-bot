@@ -118,7 +118,6 @@ func StartHeartbeatWorker(ctx context.Context, payload HearbeatPayload) {
 		log.Println("[Nusa Admin] Terhubung ke Nusa Admin! Status Online berhasil dikirim.")
 	}
 
-	// Interval cek ulang koneksi ketika offline (5 detik)
 	checkTicker := time.NewTicker(5 * time.Second)
 	defer checkTicker.Stop()
 
@@ -134,14 +133,12 @@ func StartHeartbeatWorker(ctx context.Context, payload HearbeatPayload) {
 			}
 
 			if !IsLaravelConnected() {
-				// Coba sambungkan kembali dan kirim status /online
 				if err := SendStatus("/online", payload); err == nil {
 					SetLaravelConnected(true)
 					lastHeartbeat = time.Now()
 					log.Println("[Nusa Admin] 🎉 Laravel terdeteksi aktif! Status Online berhasil dikirim.")
 				}
 			} else {
-				// Jika sudah connected, kirim heartbeat berkala
 				if time.Since(lastHeartbeat) >= PingInterval {
 					if err := SendStatus("/heartbeat", payload); err != nil {
 						SetLaravelConnected(false)

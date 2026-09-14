@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -59,6 +60,9 @@ var startCmd = &cobra.Command{
 
 		// Menjalankan poller status user
 		go bot.StartStatusPoller(ctx, service.PollInterval)
+
+		// Menjalankan scanner saham ARA / Gainers berkala ke channel Discord
+		go bot.StartStockScanner(ctx, bot.Session, 15*time.Minute)
 
 		// Menjalankan worker heartbeat & auto-reconnect ke Laravel secara non-blocking
 		go service.StartHeartbeatWorker(ctx, payloadAgent)

@@ -90,6 +90,14 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 			log.Printf("User %s (%s) submitted token: %s\n", discordUsername, user.ID, userInput)
 
+			if !service.LaravelEnabled {
+				_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: "⚠️ Layanan validasi token dinonaktifkan saat ini.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				})
+				return
+			}
+
 			req := service.TokenRequest{
 				Token:           userInput,
 				DiscordID:       user.ID,
@@ -98,15 +106,22 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			}
 
 			tokenResp, err := service.ValidateToken("/tokens/validate", req)
-			if err != nil || tokenResp == nil || !tokenResp.Valid {
+			if err != nil {
+				log.Printf("Error validating token via Laravel: %v\n", err)
+				_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Content: "⚠️ Layanan Nusa Admin (Laravel) sedang offline atau tidak dapat dihubungi. Silakan coba beberapa saat lagi.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				})
+				return
+			}
+
+			if tokenResp == nil || !tokenResp.Valid {
 				msg := "❌ Token yang Anda masukkan tidak valid atau kadaluarsa."
 				if tokenResp != nil && tokenResp.Message != "" {
 					msg = fmt.Sprintf("❌ %s", tokenResp.Message)
 					if tokenResp.ClaimedBy != "" {
 						msg += fmt.Sprintf("\n*(Sudah diklaim oleh: `%s`)*", tokenResp.ClaimedBy)
 					}
-				} else if err != nil {
-					log.Printf("Error validating token: %v\n", err)
 				}
 
 				_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{

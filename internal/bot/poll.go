@@ -10,6 +10,10 @@ import (
 )
 
 func PollUserStatuses() {
+	if !service.LaravelEnabled || !service.IsLaravelConnected() {
+		return
+	}
+
 	if database.DB == nil || Session == nil {
 		return
 	}
@@ -27,8 +31,8 @@ func PollUserStatuses() {
 
 		statusResp, err := service.CheckUserStatus(u.DiscordID)
 		if err != nil {
-			log.Printf("Gagal memeriksa status user %s: %v\n", u.DiscordID, err)
-			continue
+			log.Printf("[Poller] Gagal memeriksa status user %s (koneksi Laravel bermasalah): %v\n", u.DiscordID, err)
+			return
 		}
 
 		if !statusResp.Exists {

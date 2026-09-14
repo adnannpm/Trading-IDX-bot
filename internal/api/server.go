@@ -41,10 +41,19 @@ func SetupRouter() *gin.Engine {
 
 	apiGroup := r.Group("/api/v1/agent")
 	{
+		apiGroup.GET("/health", handleHealthCheck)
 		apiGroup.POST("/tokens/revoke", handleRevokeToken)
 	}
 
 	return r
+}
+
+func handleHealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"status":  "ONLINE",
+		"message": "Agent bot is active and ready",
+	})
 }
 
 func handleRevokeToken(c *gin.Context) {

@@ -7,13 +7,13 @@ import (
 )
 
 func TestConfigDefaults(t *testing.T) {
-	// Clear relevant env vars
 	envVars := []string{
 		"DISCORD_TOKEN", "DISCORD_GUILD_ID", "ROLE_VIP_ID", "DISCORD_ROLE_VIP",
 		"ROLE_DEFAULT_ID", "DEFAULT_MEMBER_ROLE_ID", "DISCORD_ROLE_DEFAULT",
 		"ROLE_FREE_ID", "FREE_ROLE_ID", "DISCORD_ROLE_FREE",
 		"TOP_ARA_CHANNEL_ID", "DISCORD_CHANNEL_ARA",
 		"TOP_ARB_CHANNEL_ID", "DISCORD_CHANNEL_ARB",
+		"MOMENTUM_CHANNEL_ID", "DISCORD_CHANNEL_MOMENTUM",
 		"LARAVEL_API_URL", "DATABASE_PATH", "PORT", "API_PORT",
 	}
 	for _, k := range envVars {
@@ -36,6 +36,9 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.TopArbChannelID != DefaultTopArbChannelID {
 		t.Errorf("expected TopArbChannelID %s, got %s", DefaultTopArbChannelID, cfg.TopArbChannelID)
 	}
+	if cfg.MomentumChannelID != DefaultMomentumChannelID {
+		t.Errorf("expected MomentumChannelID %s, got %s", DefaultMomentumChannelID, cfg.MomentumChannelID)
+	}
 	if cfg.LaravelAPIURL != DefaultLaravelAPIURL {
 		t.Errorf("expected LaravelAPIURL %s, got %s", DefaultLaravelAPIURL, cfg.LaravelAPIURL)
 	}
@@ -51,11 +54,13 @@ func TestConfigOverrides(t *testing.T) {
 	os.Setenv("DISCORD_TOKEN", "test-token-123")
 	os.Setenv("ROLE_VIP_ID", "vip-999")
 	os.Setenv("TOP_ARA_CHANNEL_ID", "ara-888")
+	os.Setenv("MOMENTUM_CHANNEL_ID", "momentum-777")
 	os.Setenv("API_PORT", "9090")
 	defer func() {
 		os.Unsetenv("DISCORD_TOKEN")
 		os.Unsetenv("ROLE_VIP_ID")
 		os.Unsetenv("TOP_ARA_CHANNEL_ID")
+		os.Unsetenv("MOMENTUM_CHANNEL_ID")
 		os.Unsetenv("API_PORT")
 	}()
 
@@ -68,6 +73,9 @@ func TestConfigOverrides(t *testing.T) {
 	}
 	if cfg.TopAraChannelID != "ara-888" {
 		t.Errorf("expected ara-888, got %s", cfg.TopAraChannelID)
+	}
+	if cfg.MomentumChannelID != "momentum-777" {
+		t.Errorf("expected momentum-777, got %s", cfg.MomentumChannelID)
 	}
 	if cfg.APIPort != ":9090" {
 		t.Errorf("expected :9090, got %s", cfg.APIPort)
@@ -118,7 +126,6 @@ API_PORT=3000
 		t.Errorf("expected 3000, got %s", os.Getenv("API_PORT"))
 	}
 
-	// Clean up
 	os.Unsetenv("DISCORD_TOKEN")
 	os.Unsetenv("ROLE_VIP_ID")
 	os.Unsetenv("TOP_ARA_CHANNEL_ID")

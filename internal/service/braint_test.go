@@ -69,7 +69,6 @@ func TestHeartbeatWorker_AutoReconnect(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if atomic.LoadInt32(&serverEnabled) == 0 {
-			// Simulate server down
 			hj, ok := w.(http.Hijacker)
 			if ok {
 				conn, _, _ := hj.Hijack()
@@ -106,22 +105,18 @@ func TestHeartbeatWorker_AutoReconnect(t *testing.T) {
 		Status:    "Active",
 	}
 
-	// Server is initially DOWN
 	atomic.StoreInt32(&serverEnabled, 0)
 	SetLaravelConnected(false)
 
 	go StartHeartbeatWorker(ctx, payload)
 
-	// Wait 1 second - server is down, so IsLaravelConnected must be false
 	time.Sleep(1 * time.Second)
 	if IsLaravelConnected() {
 		t.Fatalf("expected isLaravelConnected to be false initially")
 	}
 
-	// Now start/enable the server!
 	atomic.StoreInt32(&serverEnabled, 1)
 
-	// Heartbeat worker checks reconnect every 5s, let's wait for it to reconnect
 	deadline := time.Now().Add(7 * time.Second)
 	for time.Now().Before(deadline) {
 		if IsLaravelConnected() && atomic.LoadInt32(&onlineCalled) > 0 {

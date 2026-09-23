@@ -1,6 +1,7 @@
 package service
 
 import (
+	"agent-bot/internal/config"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,15 +9,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 	"time"
 )
 
 const (
-	defaultBaseURL = "http://127.0.0.1:8000/api/v1/agent"
-	PingInterval   = 20 * time.Second
-	PollInterval   = 1 * time.Minute
+	PingInterval = 20 * time.Second
+	PollInterval = 1 * time.Minute
 )
 
 var (
@@ -26,10 +25,7 @@ var (
 )
 
 func getBaseURL() string {
-	if envURL := os.Getenv("LARAVEL_API_URL"); envURL != "" {
-		return envURL
-	}
-	return defaultBaseURL
+	return config.Get().LaravelAPIURL
 }
 
 func IsLaravelConnected() bool {

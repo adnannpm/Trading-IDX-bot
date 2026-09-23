@@ -28,7 +28,14 @@ func ReadyHandler(s *discordgo.Session, r *discordgo.Ready) {
 
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		handleCommand(s, i)
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		handleAutocomplete(s, i)
 	case discordgo.InteractionMessageComponent:
+		if handleRefresh(s, i) {
+			return
+		}
 		data := i.MessageComponentData()
 		if data.CustomID == template.ModalButtonCustomID {
 			modalData := template.GetModalTemplate()
@@ -88,7 +95,7 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			}
 			avatarURL := user.AvatarURL("256")
 
-			log.Printf("User %s (%s) submitted token: %s\n", discordUsername, user.ID, userInput)
+			log.Printf("User %s (%s) submitted verification\n", discordUsername, user.ID)
 
 			if !service.LaravelEnabled {
 				_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -191,19 +198,6 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.Bot {
-		return
-	}
-
-	if m.Content == "!get-token" {
-		_, err := SendModalButton(s, m.ChannelID)
-		if err != nil {
-			log.Printf("Failed to send modal button: %v\n", err)
-		}
-	}
-}
-
 func SendModalButton(s *discordgo.Session, channelID string) (*discordgo.Message, error) {
 	return s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
 		Content: "Click the button below to submit your token:",
@@ -263,4 +257,3 @@ func RevokeMemberRole(discordID string) error {
 
 	return nil
 }
-

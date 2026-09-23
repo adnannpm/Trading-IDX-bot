@@ -27,7 +27,6 @@ func init() {
 	SyncConfig()
 }
 
-// SyncConfig memperbarui role ID dan server ID dari konfigurasi terpusat.
 func SyncConfig() {
 	cfg := config.Get()
 	RoleByPlanTier = map[string]string{

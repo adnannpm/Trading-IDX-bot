@@ -15,26 +15,30 @@ import (
 )
 
 type StockQuote struct {
-	Symbol           string  `json:"symbol"`
-	DisplaySymbol    string  `json:"display_symbol"`
-	Name             string  `json:"name"`
-	Price            float64 `json:"price"`
-	Change           float64 `json:"change"`
-	ChangePercent    float64 `json:"change_percent"`
-	Open             float64 `json:"open"`
-	High             float64 `json:"high"`
-	Low              float64 `json:"low"`
-	PreviousClose    float64 `json:"previous_close"`
-	Volume           int64   `json:"volume"`
-	Currency         string  `json:"currency"`
-	FiftyTwoWeekHigh float64 `json:"fifty_two_week_high"`
-	FiftyTwoWeekLow  float64 `json:"fifty_two_week_low"`
-	MarketState      string  `json:"market_state"`
-	LastTradeTime    int64   `json:"last_trade_time"`
-	IsARA            bool    `json:"is_ara"`
-	ARALimitPct      float64 `json:"ara_limit_pct"`
-	IsARB            bool    `json:"is_arb"`
-	ARBLimitPct      float64 `json:"arb_limit_pct"`
+	Symbol               string  `json:"symbol"`
+	DisplaySymbol        string  `json:"display_symbol"`
+	Name                 string  `json:"name"`
+	Price                float64 `json:"price"`
+	Change               float64 `json:"change"`
+	ChangePercent        float64 `json:"change_percent"`
+	Open                 float64 `json:"open"`
+	High                 float64 `json:"high"`
+	Low                  float64 `json:"low"`
+	PreviousClose        float64 `json:"previous_close"`
+	Volume               int64   `json:"volume"`
+	AvgVolume10Day       int64   `json:"avg_volume_10d"`
+	VolumeSpikeRatio     float64 `json:"volume_spike_ratio"`
+	IsVolumeSpike        bool    `json:"is_volume_spike"`
+	Currency             string  `json:"currency"`
+	FiftyTwoWeekHigh     float64 `json:"fifty_two_week_high"`
+	FiftyTwoWeekLow      float64 `json:"fifty_two_week_low"`
+	Is52WeekHighBreakout bool    `json:"is_52w_high_breakout"`
+	MarketState          string  `json:"market_state"`
+	LastTradeTime        int64   `json:"last_trade_time"`
+	IsARA                bool    `json:"is_ara"`
+	ARALimitPct          float64 `json:"ara_limit_pct"`
+	IsARB                bool    `json:"is_arb"`
+	ARBLimitPct          float64 `json:"arb_limit_pct"`
 }
 
 type yahooScreenerItem struct {
@@ -49,6 +53,8 @@ type yahooScreenerItem struct {
 	RegularMarketDayLow        float64 `json:"regularMarketDayLow"`
 	RegularMarketPreviousClose float64 `json:"regularMarketPreviousClose"`
 	RegularMarketVolume        int64   `json:"regularMarketVolume"`
+	AverageDailyVolume10Day    int64   `json:"averageDailyVolume10Day"`
+	AverageDailyVolume3Month   int64   `json:"averageDailyVolume3Month"`
 	Currency                   string  `json:"currency"`
 	MarketState                string  `json:"marketState"`
 	RegularMarketTime          int64   `json:"regularMarketTime"`
@@ -69,19 +75,19 @@ type yahooChartResponse struct {
 	Chart struct {
 		Result []struct {
 			Meta struct {
-				Symbol             string  `json:"symbol"`
-				ShortName          string  `json:"shortName"`
-				LongName           string  `json:"longName"`
-				RegularMarketPrice float64 `json:"regularMarketPrice"`
-				ChartPreviousClose float64 `json:"chartPreviousClose"`
-				PreviousClose      float64 `json:"previousClose"`
-				RegularMarketOpen  float64 `json:"regularMarketOpen"`
+				Symbol               string  `json:"symbol"`
+				ShortName            string  `json:"shortName"`
+				LongName             string  `json:"longName"`
+				RegularMarketPrice   float64 `json:"regularMarketPrice"`
+				ChartPreviousClose   float64 `json:"chartPreviousClose"`
+				PreviousClose        float64 `json:"previousClose"`
+				RegularMarketOpen    float64 `json:"regularMarketOpen"`
 				RegularMarketDayHigh float64 `json:"regularMarketDayHigh"`
 				RegularMarketDayLow  float64 `json:"regularMarketDayLow"`
-				RegularMarketVolume int64   `json:"regularMarketVolume"`
-				Currency           string  `json:"currency"`
-				MarketState        string  `json:"marketState"`
-				RegularMarketTime  int64   `json:"regularMarketTime"`
+				RegularMarketVolume  int64   `json:"regularMarketVolume"`
+				Currency             string  `json:"currency"`
+				MarketState          string  `json:"marketState"`
+				RegularMarketTime    int64   `json:"regularMarketTime"`
 			} `json:"meta"`
 		} `json:"result"`
 	} `json:"chart"`
@@ -149,6 +155,27 @@ func CheckIsARB(changePct float64, prevPrice float64) (bool, float64) {
 		return true, 10.0
 	}
 	return false, limit
+}
+
+func CheckVolumeSpike(vol, avg10d int64, changePct float64) (bool, float64) {
+	if avg10d <= 0 || vol <= 0 {
+		return false, 0
+	}
+	ratio := float64(vol) / float64(avg10d)
+	if ratio >= 1.5 && changePct >= 4.0 && changePct <= 15.0 {
+		return true, ratio
+	}
+	return false, ratio
+}
+
+func Check52WeekHighBreakout(price, high, fiftyTwoWeekHigh, changePct float64) bool {
+	if fiftyTwoWeekHigh <= 0 || price <= 0 || changePct <= 0 {
+		return false
+	}
+	if (high >= fiftyTwoWeekHigh || price >= fiftyTwoWeekHigh*0.995) && changePct >= 2.0 {
+		return true
+	}
+	return false
 }
 
 func getYahooSession() (*yahooSession, error) {
@@ -291,35 +318,40 @@ func queryScreener(sess *yahooSession, sortType string, size int) ([]StockQuote,
 				changePct = (change / prevPrice) * 100
 			}
 
-			// Abaikan saham yang tidak ada perubahan atau harga 0
 			if price <= 0 {
 				continue
 			}
 
 			isAra, limitPct := CheckIsARA(changePct, prevPrice)
 			isArb, arbLimitPct := CheckIsARB(changePct, prevPrice)
+			isSpike, spikeRatio := CheckVolumeSpike(q.RegularMarketVolume, q.AverageDailyVolume10Day, changePct)
+			is52w := Check52WeekHighBreakout(price, q.RegularMarketDayHigh, q.FiftyTwoWeekHigh, changePct)
 
 			quote := StockQuote{
-				Symbol:           q.Symbol,
-				DisplaySymbol:    displaySym,
-				Name:             name,
-				Price:            price,
-				Change:           change,
-				ChangePercent:    changePct,
-				Open:             q.RegularMarketOpen,
-				High:             q.RegularMarketDayHigh,
-				Low:              q.RegularMarketDayLow,
-				PreviousClose:    prevPrice,
-				Volume:           q.RegularMarketVolume,
-				Currency:         q.Currency,
-				FiftyTwoWeekHigh: q.FiftyTwoWeekHigh,
-				FiftyTwoWeekLow:  q.FiftyTwoWeekLow,
-				MarketState:      q.MarketState,
-				LastTradeTime:    q.RegularMarketTime,
-				IsARA:            isAra,
-				ARALimitPct:      limitPct,
-				IsARB:            isArb,
-				ARBLimitPct:      arbLimitPct,
+				Symbol:               q.Symbol,
+				DisplaySymbol:        displaySym,
+				Name:                 name,
+				Price:                price,
+				Change:               change,
+				ChangePercent:        changePct,
+				Open:                 q.RegularMarketOpen,
+				High:                 q.RegularMarketDayHigh,
+				Low:                  q.RegularMarketDayLow,
+				PreviousClose:        prevPrice,
+				Volume:               q.RegularMarketVolume,
+				AvgVolume10Day:       q.AverageDailyVolume10Day,
+				VolumeSpikeRatio:     spikeRatio,
+				IsVolumeSpike:        isSpike,
+				FiftyTwoWeekHigh:     q.FiftyTwoWeekHigh,
+				FiftyTwoWeekLow:      q.FiftyTwoWeekLow,
+				Is52WeekHighBreakout: is52w,
+				Currency:             q.Currency,
+				MarketState:          q.MarketState,
+				LastTradeTime:        q.RegularMarketTime,
+				IsARA:                isAra,
+				ARALimitPct:          limitPct,
+				IsARB:                isArb,
+				ARBLimitPct:          arbLimitPct,
 			}
 			results = append(results, quote)
 		}
@@ -338,7 +370,6 @@ func FetchTopGainers(limit int) ([]StockQuote, error) {
 		return nil, fmt.Errorf("gagal mendapatkan session Yahoo: %w", err)
 	}
 
-	// Ambil 30 item untuk mendapatkan pool gainers yang komprehensif
 	fetchSize := 30
 	if limit > fetchSize {
 		fetchSize = limit + 10
@@ -360,7 +391,6 @@ func FetchTopGainers(limit int) ([]StockQuote, error) {
 		}
 	}
 
-	// Filter hanya yang mengalami kenaikan (> 0%)
 	var gainers []StockQuote
 	for _, q := range quotes {
 		if q.ChangePercent > 0 {
@@ -368,7 +398,6 @@ func FetchTopGainers(limit int) ([]StockQuote, error) {
 		}
 	}
 
-	// Urutkan berdasarkan ChangePercent descending
 	for i := 0; i < len(gainers)-1; i++ {
 		for j := i + 1; j < len(gainers); j++ {
 			if gainers[i].ChangePercent < gainers[j].ChangePercent {
@@ -422,7 +451,6 @@ func FetchTopLosers(limit int) ([]StockQuote, error) {
 		}
 	}
 
-	// Urutkan ascending: persentase penurunan terdalam paling pertama (paling negatif)
 	for i := 0; i < len(losers)-1; i++ {
 		for j := i + 1; j < len(losers); j++ {
 			if losers[i].ChangePercent > losers[j].ChangePercent {
@@ -436,6 +464,80 @@ func FetchTopLosers(limit int) ([]StockQuote, error) {
 	}
 
 	return losers, nil
+}
+
+func FetchMomentumStocks(limit int) ([]StockQuote, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+
+	sess, err := getYahooSession()
+	if err != nil {
+		return nil, fmt.Errorf("gagal mendapatkan session Yahoo: %w", err)
+	}
+
+	fetchSize := 60
+	quotes, err := queryScreener(sess, "DESC", fetchSize)
+	if err != nil {
+		sessionLock.Lock()
+		cachedSession = nil
+		sessionLock.Unlock()
+
+		sess, err = getYahooSession()
+		if err != nil {
+			return nil, fmt.Errorf("retry get session gagal: %w", err)
+		}
+		quotes, err = queryScreener(sess, "DESC", fetchSize)
+		if err != nil {
+			return nil, fmt.Errorf("screener momentum gagal setelah retry: %w", err)
+		}
+	}
+
+	var candidates []StockQuote
+	seen := make(map[string]bool)
+
+	for _, q := range quotes {
+		if seen[q.Symbol] {
+			continue
+		}
+
+		hasLiquidity := q.Volume >= 200_000
+
+		if (q.IsVolumeSpike || q.Is52WeekHighBreakout) && hasLiquidity {
+			candidates = append(candidates, q)
+			seen[q.Symbol] = true
+		}
+	}
+
+	for i := 0; i < len(candidates)-1; i++ {
+		for j := i + 1; j < len(candidates); j++ {
+			scoreI := 0
+			if candidates[i].IsVolumeSpike {
+				scoreI += 2
+			}
+			if candidates[i].Is52WeekHighBreakout {
+				scoreI += 2
+			}
+
+			scoreJ := 0
+			if candidates[j].IsVolumeSpike {
+				scoreJ += 2
+			}
+			if candidates[j].Is52WeekHighBreakout {
+				scoreJ += 2
+			}
+
+			if scoreI < scoreJ || (scoreI == scoreJ && candidates[i].VolumeSpikeRatio < candidates[j].VolumeSpikeRatio) {
+				candidates[i], candidates[j] = candidates[j], candidates[i]
+			}
+		}
+	}
+
+	if len(candidates) > limit {
+		candidates = candidates[:limit]
+	}
+
+	return candidates, nil
 }
 
 func FetchStockQuote(symbol string) (*StockQuote, error) {

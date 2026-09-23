@@ -1,9 +1,8 @@
 package bot
 
 import (
+	"agent-bot/internal/config"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -11,11 +10,11 @@ import (
 var Session *discordgo.Session
 
 func ConnectBot() error {
-	token := strings.TrimSpace(os.Getenv("DISCORD_TOKEN"))
-	if token == "" {
-		return fmt.Errorf("DISCORD_TOKEN wajib diisi")
+	cfg := config.Get()
+	if cfg.DiscordToken == "" {
+		return fmt.Errorf("DISCORD_TOKEN wajib diisi (.env atau environment variable)")
 	}
-	bot, err := discordgo.New("Bot " + token)
+	bot, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
 		return err
 	}
@@ -25,13 +24,12 @@ func ConnectBot() error {
 	if err = bot.Open(); err != nil {
 		return err
 	}
-	guildID := strings.TrimSpace(os.Getenv("DISCORD_GUILD_ID"))
-	if err = registerCommands(bot, bot.State.User.ID, guildID); err != nil {
+	if err = registerCommands(bot, bot.State.User.ID, cfg.DiscordGuildID); err != nil {
 		_ = bot.Close()
 		return err
 	}
-	if guildID != "" {
-		ServerGuildID = guildID
+	if cfg.DiscordGuildID != "" {
+		ServerGuildID = cfg.DiscordGuildID
 	}
 	Session = bot
 	return nil

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	_ "agent-bot/internal/config"
 	"os"
 
 	"github.com/spf13/cobra"

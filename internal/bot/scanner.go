@@ -1,11 +1,11 @@
 package bot
 
 import (
+	"agent-bot/internal/config"
 	"agent-bot/internal/service"
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	// DefaultTopAraChannelID adalah ID channel "📉-top-ara" di server Discord NUSA
-	DefaultTopAraChannelID = "1546695838779314226"
+	// DefaultTopAraChannelID adalah ID channel default "📉-top-ara" di server Discord NUSA
+	DefaultTopAraChannelID = config.DefaultTopAraChannelID
 
-	// DefaultTopArbChannelID adalah ID channel "📈-top-arb" di server Discord NUSA
-	DefaultTopArbChannelID = "1546695999748050944"
+	// DefaultTopArbChannelID adalah ID channel default "📈-top-arb" di server Discord NUSA
+	DefaultTopArbChannelID = config.DefaultTopArbChannelID
 
 	// Cooldown cache untuk mencegah spam saham yang sama berulang kali
 	sentAlerts     = make(map[string]time.Time)
@@ -26,17 +26,11 @@ var (
 )
 
 func GetTopAraChannelID() string {
-	if envID := os.Getenv("TOP_ARA_CHANNEL_ID"); envID != "" {
-		return envID
-	}
-	return DefaultTopAraChannelID
+	return config.Get().TopAraChannelID
 }
 
 func GetTopArbChannelID() string {
-	if envID := os.Getenv("TOP_ARB_CHANNEL_ID"); envID != "" {
-		return envID
-	}
-	return DefaultTopArbChannelID
+	return config.Get().TopArbChannelID
 }
 
 func FormatPrice(price float64) string {

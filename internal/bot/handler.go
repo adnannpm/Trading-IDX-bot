@@ -7,7 +7,6 @@ import (
 	"agent-bot/internal/service"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -29,7 +28,14 @@ func ReadyHandler(s *discordgo.Session, r *discordgo.Ready) {
 
 func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		handleCommand(s, i)
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		handleAutocomplete(s, i)
 	case discordgo.InteractionMessageComponent:
+		if handleRefresh(s, i) {
+			return
+		}
 		data := i.MessageComponentData()
 		if data.CustomID == template.ModalButtonCustomID {
 			modalData := template.GetModalTemplate()
@@ -89,7 +95,7 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			}
 			avatarURL := user.AvatarURL("256")
 
-			log.Printf("User %s (%s) submitted token: %s\n", discordUsername, user.ID, userInput)
+			log.Printf("User %s (%s) submitted verification\n", discordUsername, user.ID)
 
 			if !service.LaravelEnabled {
 				_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -192,72 +198,6 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func MessageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.Author.Bot {
-		return
-	}
-
-	if m.Content == "!get-token" {
-		_, err := SendModalButton(s, m.ChannelID)
-		if err != nil {
-			log.Printf("Failed to send modal button: %v\n", err)
-		}
-		return
-	}
-
-	if m.Content == "!scan-ara" || m.Content == "!top-ara" {
-		_, _ = s.ChannelMessageSend(m.ChannelID, "🔍 Memindai data Top 10 Saham ARA / Gainers terbaru dari Bursa Efek Indonesia...")
-		sent, err := BroadcastTop10ARA(s, GetTopAraChannelID())
-		if err != nil {
-			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal memindai ARA: %v", err))
-			return
-		}
-		if len(sent) > 0 {
-			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("✅ Berhasil mengirim 1 pesan rangkuman Top %d Saham ARA/Gainers ke channel <#%s>!", len(sent), GetTopAraChannelID()))
-		}
-		return
-	}
-
-	if m.Content == "!scan-arb" || m.Content == "!top-arb" {
-		_, _ = s.ChannelMessageSend(m.ChannelID, "🔍 Memindai data Top 10 Saham ARB / Losers terbaru dari Bursa Efek Indonesia...")
-		sent, err := BroadcastTop10ARB(s, GetTopArbChannelID())
-		if err != nil {
-			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal memindai ARB: %v", err))
-			return
-		}
-		if len(sent) > 0 {
-			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("✅ Berhasil mengirim 1 pesan rangkuman Top %d Saham ARB/Losers ke channel <#%s>!", len(sent), GetTopArbChannelID()))
-		}
-		return
-	}
-
-	if m.Content == "!scan-all" {
-		_, _ = s.ChannelMessageSend(m.ChannelID, "🔍 Memindai data Top 10 Saham ARA dan ARB terbaru dari Bursa Efek Indonesia...")
-		sentAra, errAra := BroadcastTop10ARA(s, GetTopAraChannelID())
-		sentArb, errArb := BroadcastTop10ARB(s, GetTopArbChannelID())
-		if errAra != nil && errArb != nil {
-			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal memindai: ARA (%v), ARB (%v)", errAra, errArb))
-			return
-		}
-		_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("✅ Berhasil memindai pasar!\n• Top %d ARA terkirim ke <#%s>\n• Top %d ARB terkirim ke <#%s>", len(sentAra), GetTopAraChannelID(), len(sentArb), GetTopArbChannelID()))
-		return
-	}
-
-	if strings.HasPrefix(m.Content, "!saham ") {
-		ticker := strings.TrimSpace(strings.TrimPrefix(m.Content, "!saham "))
-		if ticker != "" {
-			quote, err := service.FetchStockQuote(ticker)
-			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("❌ Gagal mengambil data saham `%s`: %v", ticker, err))
-				return
-			}
-			embed := CreateStockEmbed(*quote)
-			_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
-		}
-		return
-	}
-}
-
 func SendModalButton(s *discordgo.Session, channelID string) (*discordgo.Message, error) {
 	return s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
 		Content: "Click the button below to submit your token:",
@@ -317,4 +257,3 @@ func RevokeMemberRole(discordID string) error {
 
 	return nil
 }
-

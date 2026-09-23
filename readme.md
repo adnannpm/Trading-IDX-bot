@@ -53,8 +53,8 @@ Nusa Agent Bot is a dedicated Discord service built for the Nusa community. It p
 |                                                                |
 |  [ Discord Bot Layer ]                                         |
 |    - Modal / Button interactions (Token submission)            |
-|    - Command router (!saham, !scan-ara, !scan-arb, etc.)       |
-|    - Rich embed builders                                       |
+|    - Slash Command router (/saham, /scan, /verif)               |
+|    - Rich embed builders & interactive components              |
 |                                                                |
 |  [ Services & Workers ]                                        |
 |    - Market Scanner (Yahoo Finance feed, ARA/ARB rules)        |
@@ -124,6 +124,8 @@ The bot reads environment variables for runtime configuration. Default values ar
 
 | Variable | Description | Default |
 |---|---|---|
+| `DISCORD_TOKEN` | Discord Bot Token (Required) | - |
+| `DISCORD_GUILD_ID` | Target Discord Guild ID for instant command registration (Optional) | Global (if omitted) |
 | `LARAVEL_API_URL` | Upstream administration service base URL | Configured in environment |
 | `TOP_ARA_CHANNEL_ID` | Discord channel ID for ARA / Top Gainers broadcasts | `1546695838779314226` |
 | `TOP_ARB_CHANNEL_ID` | Discord channel ID for ARB / Top Losers broadcasts | `1546695999748050944` |
@@ -192,15 +194,15 @@ You can trigger one-off scanner jobs without running the full daemon. These comm
 
 ---
 
-## Discord Commands Reference
+## Discord Commands Reference (Slash Commands)
 
-| Command | Scope | Description |
+| Command | Options | Description |
 |---|---|---|
-| `!get-token` | User | Displays a message with a button to open the verification token modal. |
-| `!saham <TICKER>` | User | Fetches real-time market data for the specified IDX stock (e.g., `!saham BBCA`). |
-| `!scan-ara` or `!top-ara` | Channel | Triggers an immediate scan of Top 10 Gainers and publishes the report to the ARA channel. |
-| `!scan-arb` or `!top-arb` | Channel | Triggers an immediate scan of Top 10 Losers and publishes the report to the ARB channel. |
-| `!scan-all` | Channel | Triggers an immediate scan for both ARA and ARB channels. |
+| `/saham` | `kode` (Required, Autocomplete) | Menampilkan live quote saham IDX dengan embed lengkap dan tombol interaktif **Refresh** (khusus pemanggil command). Contoh: `/saham kode:BBCA` atau `/saham kode:IHSG`. |
+| `/scan ara` | - | Memindai Top 10 Gainers / ARA dan mempublikasikan laporannya ke channel ARA. Respon status command bersifat privat (ephemeral). |
+| `/scan arb` | - | Memindai Top 10 Losers / ARB dan mempublikasikan laporannya ke channel ARB. Respon status command bersifat privat (ephemeral). |
+| `/scan all` | - | Memindai Top 10 ARA dan ARB sekaligus ke masing-masing channel. |
+| `/verif` | - | Membuka modal input token Nusa untuk aktivasi role member secara langsung dan privat (ephemeral). |
 
 ---
 

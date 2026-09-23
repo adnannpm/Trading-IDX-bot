@@ -56,16 +56,12 @@ var startCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Menjalankan API Server lokal untuk menerima webhook/request dari Laravel
 		go api.StartServer(ctx, config.Get().APIPort)
 
-		// Menjalankan poller status user
 		go bot.StartStatusPoller(ctx, service.PollInterval)
 
-		// Menjalankan scanner saham ARA / Gainers berkala ke channel Discord
 		go bot.StartStockScanner(ctx, bot.Session, 15*time.Minute)
 
-		// Menjalankan worker heartbeat & auto-reconnect ke Laravel secara non-blocking
 		go service.StartHeartbeatWorker(ctx, payloadAgent)
 
 		sc := make(chan os.Signal, 1)
@@ -75,7 +71,6 @@ var startCmd = &cobra.Command{
 		log.Println("Menghentikan bot...")
 		cancel()
 
-		// Kirim status offline ke Laravel jika terhubung
 		service.ShutdownHeartbeat(payloadAgent)
 
 		log.Println("Bot shutting down...")

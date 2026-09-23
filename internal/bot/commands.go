@@ -17,10 +17,11 @@ func commandDefinitions() []*discordgo.ApplicationCommand {
 		{Name: "saham", Description: "Lihat harga saham IDX terbaru", DMPermission: &dm, Options: []*discordgo.ApplicationCommandOption{
 			{Type: discordgo.ApplicationCommandOptionString, Name: "kode", Description: "Kode saham (contoh BBCA) atau IHSG", Required: true, Autocomplete: true},
 		}},
-		{Name: "scan", Description: "Kirim rangkuman Top 10 ke channel pasar", DMPermission: &dm, Options: []*discordgo.ApplicationCommandOption{
+		{Name: "scan", Description: "Kirim rangkuman pasar ke channel tujuan", DMPermission: &dm, Options: []*discordgo.ApplicationCommandOption{
 			{Type: discordgo.ApplicationCommandOptionSubCommand, Name: "ara", Description: "Top 10 ARA / gainers"},
 			{Type: discordgo.ApplicationCommandOptionSubCommand, Name: "arb", Description: "Top 10 ARB / losers"},
-			{Type: discordgo.ApplicationCommandOptionSubCommand, Name: "all", Description: "Scan ARA dan ARB"},
+			{Type: discordgo.ApplicationCommandOptionSubCommand, Name: "momentum", Description: "Saham Gacor: Early Momentum & Volume Spike"},
+			{Type: discordgo.ApplicationCommandOptionSubCommand, Name: "all", Description: "Scan ARA, ARB, dan Momentum"},
 		}},
 		{Name: "verif", Description: "Aktivasi akun Discord dengan token Nusa", DMPermission: &dm},
 	}
@@ -117,31 +118,44 @@ func handleCommand(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 		updateQuote(s, i, symbol, i.Member.User.ID)
 	case "scan":
-		if len(data.Options) != 1 || data.Options[0].Type != discordgo.ApplicationCommandOptionSubCommand || (data.Options[0].Name != "ara" && data.Options[0].Name != "arb" && data.Options[0].Name != "all") {
-			privateMessage(s, i, "Pilih /scan ara, /scan arb, atau /scan all.")
+		sub := ""
+		if len(data.Options) == 1 && data.Options[0].Type == discordgo.ApplicationCommandOptionSubCommand {
+			sub = data.Options[0].Name
+		}
+		if sub != "ara" && sub != "arb" && sub != "momentum" && sub != "all" {
+			privateMessage(s, i, "Pilih /scan ara, /scan arb, /scan momentum, atau /scan all.")
 			return
 		}
 		if !respond(s, i, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Flags: discordgo.MessageFlagsEphemeral}}) {
 			return
 		}
-		mode := data.Options[0].Name
 		lines := []string{}
-		for _, kind := range []string{"ara", "arb"} {
-			if mode != "all" && mode != kind {
+		for _, kind := range []string{"ara", "arb", "momentum"} {
+			if sub != "all" && sub != kind {
 				continue
 			}
-			channel := GetTopAraChannelID()
-			broadcast := BroadcastTop10ARA
-			if kind == "arb" {
+			var channel string
+			var count int
+			var err error
+			switch kind {
+			case "ara":
+				channel = GetTopAraChannelID()
+				st, e := BroadcastTop10ARA(s, channel)
+				count, err = len(st), e
+			case "arb":
 				channel = GetTopArbChannelID()
-				broadcast = BroadcastTop10ARB
+				st, e := BroadcastTop10ARB(s, channel)
+				count, err = len(st), e
+			case "momentum":
+				channel = GetMomentumChannelID()
+				st, e := BroadcastTopMomentum(s, channel)
+				count, err = len(st), e
 			}
-			stocks, err := broadcast(s, channel)
 			if err != nil {
 				log.Printf("Slash scan %s failed: %v", kind, err)
-				lines = append(lines, fmt.Sprintf("❌ %s gagal dikirim. Data mungkin tidak tersedia atau channel tidak dapat diakses. Coba lagi nanti.", strings.ToUpper(kind)))
+				lines = append(lines, fmt.Sprintf("❌ %s gagal dikirim: %v", strings.ToUpper(kind), err))
 			} else {
-				lines = append(lines, fmt.Sprintf("✅ Top %d %s terkirim ke <#%s>.", len(stocks), strings.ToUpper(kind), channel))
+				lines = append(lines, fmt.Sprintf("✅ Top %d %s terkirim ke <#%s>.", count, strings.ToUpper(kind), channel))
 			}
 		}
 		message := strings.Join(lines, "\n")
@@ -156,7 +170,6 @@ func updateQuote(s *discordgo.Session, i *discordgo.InteractionCreate, symbol, o
 	if err != nil || quote == nil {
 		log.Printf("Quote %s unavailable: %v", symbol, err)
 		message := "❌ Data saham tidak tersedia. Periksa kode atau coba Refresh beberapa saat lagi."
-		// Keep the last successful embed on a refresh failure.
 		components := refreshComponents(symbol, owner)
 		editResponse(s, i, &discordgo.WebhookEdit{Content: &message, Components: &components})
 		return

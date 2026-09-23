@@ -45,6 +45,46 @@ func TestFormatNumberWithDots(t *testing.T) {
 	}
 }
 
+func TestCheckVolumeSpike(t *testing.T) {
+	isSpike, ratio := CheckVolumeSpike(3_000_000, 1_000_000, 7.0)
+	if !isSpike || ratio != 3.0 {
+		t.Errorf("Expected true and 3.0, got %v and %v", isSpike, ratio)
+	}
+
+	isSpike, ratio = CheckVolumeSpike(1_200_000, 1_000_000, 7.0)
+	if isSpike || ratio != 1.2 {
+		t.Errorf("Expected false and 1.2, got %v and %v", isSpike, ratio)
+	}
+
+	isSpike, _ = CheckVolumeSpike(3_000_000, 1_000_000, 25.0)
+	if isSpike {
+		t.Errorf("Expected false for change 25.0%%, got true")
+	}
+
+	isSpike, _ = CheckVolumeSpike(3_000_000, 1_000_000, 2.0)
+	if isSpike {
+		t.Errorf("Expected false for change 2.0%%, got true")
+	}
+}
+
+func TestCheck52WeekHighBreakout(t *testing.T) {
+	if !Check52WeekHighBreakout(1050, 1060, 1000, 5.0) {
+		t.Errorf("Expected breakout true for high 1060 vs 52w 1000")
+	}
+
+	if !Check52WeekHighBreakout(998, 998, 1000, 4.0) {
+		t.Errorf("Expected breakout true near high")
+	}
+
+	if Check52WeekHighBreakout(800, 810, 1000, 5.0) {
+		t.Errorf("Expected breakout false for 800 vs 1000")
+	}
+
+	if Check52WeekHighBreakout(1050, 1050, 1000, -2.0) {
+		t.Errorf("Expected breakout false for negative change")
+	}
+}
+
 func TestFetchTopGainersLive(t *testing.T) {
 	gainers, err := FetchTopGainers(5)
 	if err != nil {

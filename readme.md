@@ -131,6 +131,7 @@ The bot automatically loads a `.env` file from the working directory if present,
 | `FREE_ROLE_ID` | Fallback Discord Role ID assigned when subscription expires | `1546692502785101874` |
 | `TOP_ARA_CHANNEL_ID` | Discord channel ID for ARA / Top Gainers broadcasts | `1546695838779314226` |
 | `TOP_ARB_CHANNEL_ID` | Discord channel ID for ARB / Top Losers broadcasts | `1546695999748050944` |
+| `MOMENTUM_CHANNEL_ID` | Discord channel ID for Emiten Momentum broadcasts | `1546695838779314226` |
 | `LARAVEL_API_URL` | Upstream administration service base URL | `http://127.0.0.1:8000/api/v1/agent` |
 | `API_PORT` | Local REST API port for webhooks | `:8080` |
 | `DATABASE_PATH` | Local SQLite database file path | `nusa.db` |
@@ -192,7 +193,11 @@ You can trigger one-off scanner jobs without running the full daemon. These comm
   ```bash
   ./agent-bot scan-arb
   ```
-- Scan Both ARA and ARB:
+- Scan Emiten Momentum (Volume Spike & 52W High Breakout):
+  ```bash
+  ./agent-bot scan-momentum
+  ```
+- Scan Both ARA, ARB, and Momentum:
   ```bash
   ./agent-bot scan
   ```
@@ -206,7 +211,8 @@ You can trigger one-off scanner jobs without running the full daemon. These comm
 | `/saham` | `kode` (Required, Autocomplete) | Menampilkan live quote saham IDX dengan embed lengkap dan tombol interaktif **Refresh** (khusus pemanggil command). Contoh: `/saham kode:BBCA` atau `/saham kode:IHSG`. |
 | `/scan ara` | - | Memindai Top 10 Gainers / ARA dan mempublikasikan laporannya ke channel ARA. Respon status command bersifat privat (ephemeral). |
 | `/scan arb` | - | Memindai Top 10 Losers / ARB dan mempublikasikan laporannya ke channel ARB. Respon status command bersifat privat (ephemeral). |
-| `/scan all` | - | Memindai Top 10 ARA dan ARB sekaligus ke masing-masing channel. |
+| `/scan momentum` | - | Memindai radar **Emiten Momentum**: Unusual Volume Spike (>150% - 200% avg 10D) & 52-Week High Breakout ke channel Emiten Momentum. |
+| `/scan all` | - | Memindai Top 10 ARA, ARB, dan Momentum sekaligus ke masing-masing channel. |
 | `/verif` | - | Membuka modal input token Nusa untuk aktivasi role member secara langsung dan privat (ephemeral). |
 
 ---

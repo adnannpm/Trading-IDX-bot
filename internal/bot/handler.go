@@ -2,6 +2,7 @@ package bot
 
 import (
 	"agent-bot/internal/bot/template"
+	"agent-bot/internal/config"
 	"agent-bot/internal/database"
 	"agent-bot/internal/model"
 	"agent-bot/internal/service"
@@ -13,14 +14,31 @@ import (
 )
 
 var RoleByPlanTier = map[string]string{
-	"VIP": "1546438682276528168",
+	"VIP": config.DefaultRoleVIPID,
 }
 
-var DefaultMemberRoleID = "1546692502785101874"
+var DefaultMemberRoleID = config.DefaultRoleMemberID
 
-var FreeRoleID = "1546692502785101874"
+var FreeRoleID = config.DefaultRoleFreeID
 
 var ServerGuildID = ""
+
+func init() {
+	SyncConfig()
+}
+
+// SyncConfig memperbarui role ID dan server ID dari konfigurasi terpusat.
+func SyncConfig() {
+	cfg := config.Get()
+	RoleByPlanTier = map[string]string{
+		"VIP": cfg.RoleVIPID,
+	}
+	DefaultMemberRoleID = cfg.RoleDefaultID
+	FreeRoleID = cfg.RoleFreeID
+	if cfg.DiscordGuildID != "" {
+		ServerGuildID = cfg.DiscordGuildID
+	}
+}
 
 func ReadyHandler(s *discordgo.Session, r *discordgo.Ready) {
 	log.Printf("Bot logged in as %s#%s (%s)\n", r.User.Username, r.User.Discriminator, r.User.ID)
@@ -138,9 +156,12 @@ func InteractionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				return
 			}
 
-			targetRoleID := DefaultMemberRoleID
+			cfg := config.Get()
+			targetRoleID := cfg.RoleDefaultID
 			if tokenResp.Data != nil && tokenResp.Data.PlanTier != "" {
-				if roleID, ok := RoleByPlanTier[tokenResp.Data.PlanTier]; ok && roleID != "" {
+				if roleID := cfg.GetRoleForTier(tokenResp.Data.PlanTier); roleID != "" {
+					targetRoleID = roleID
+				} else if roleID, ok := RoleByPlanTier[tokenResp.Data.PlanTier]; ok && roleID != "" {
 					targetRoleID = roleID
 				}
 			}
@@ -216,15 +237,26 @@ func RevokeMemberRole(discordID string) error {
 		return fmt.Errorf("bot session belum terhubung")
 	}
 
+	cfg := config.Get()
 	rolesToRemove := []string{}
-	for _, r := range RoleByPlanTier {
-		if r != "" {
-			rolesToRemove = append(rolesToRemove, r)
+	addUnique := func(id string) {
+		if id == "" {
+			return
 		}
+		for _, r := range rolesToRemove {
+			if r == id {
+				return
+			}
+		}
+		rolesToRemove = append(rolesToRemove, id)
 	}
-	if DefaultMemberRoleID != "" {
-		rolesToRemove = append(rolesToRemove, DefaultMemberRoleID)
+
+	for _, r := range RoleByPlanTier {
+		addUnique(r)
 	}
+	addUnique(cfg.RoleVIPID)
+	addUnique(cfg.RoleDefaultID)
+	addUnique(DefaultMemberRoleID)
 
 	guilds := []string{}
 	if ServerGuildID != "" {
@@ -233,6 +265,11 @@ func RevokeMemberRole(discordID string) error {
 		for _, g := range Session.State.Guilds {
 			guilds = append(guilds, g.ID)
 		}
+	}
+
+	freeRole := cfg.RoleFreeID
+	if freeRole == "" {
+		freeRole = FreeRoleID
 	}
 
 	for _, gID := range guilds {
@@ -245,12 +282,12 @@ func RevokeMemberRole(discordID string) error {
 			}
 		}
 
-		if FreeRoleID != "" {
-			err := Session.GuildMemberRoleAdd(gID, discordID, FreeRoleID)
+		if freeRole != "" {
+			err := Session.GuildMemberRoleAdd(gID, discordID, freeRole)
 			if err != nil {
-				log.Printf("Gagal menambahkan role FREE %s ke user %s: %v\n", FreeRoleID, discordID, err)
+				log.Printf("Gagal menambahkan role FREE %s ke user %s: %v\n", freeRole, discordID, err)
 			} else {
-				log.Printf("Role FREE %s berhasil ditambahkan ke user %s\n", FreeRoleID, discordID)
+				log.Printf("Role FREE %s berhasil ditambahkan ke user %s\n", freeRole, discordID)
 			}
 		}
 	}

@@ -120,15 +120,20 @@ agent-bot/
 
 ## Configuration
 
-The bot reads environment variables for runtime configuration. Default values are applied if not explicitly set.
+The bot automatically loads a `.env` file from the working directory if present, and falls back to system environment variables and built-in defaults. A template is provided in `.env.example`.
 
 | Variable | Description | Default |
 |---|---|---|
 | `DISCORD_TOKEN` | Discord Bot Token (Required) | - |
 | `DISCORD_GUILD_ID` | Target Discord Guild ID for instant command registration (Optional) | Global (if omitted) |
-| `LARAVEL_API_URL` | Upstream administration service base URL | Configured in environment |
+| `ROLE_VIP_ID` | Discord Role ID for VIP subscription plan tier | `1546438682276528168` |
+| `DEFAULT_MEMBER_ROLE_ID` | Default Discord Role ID assigned upon successful verification | `1546692502785101874` |
+| `FREE_ROLE_ID` | Fallback Discord Role ID assigned when subscription expires | `1546692502785101874` |
 | `TOP_ARA_CHANNEL_ID` | Discord channel ID for ARA / Top Gainers broadcasts | `1546695838779314226` |
 | `TOP_ARB_CHANNEL_ID` | Discord channel ID for ARB / Top Losers broadcasts | `1546695999748050944` |
+| `LARAVEL_API_URL` | Upstream administration service base URL | `http://127.0.0.1:8000/api/v1/agent` |
+| `API_PORT` | Local REST API port for webhooks | `:8080` |
+| `DATABASE_PATH` | Local SQLite database file path | `nusa.db` |
 
 ---
 

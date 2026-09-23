@@ -1,2 +1,4 @@
 nusa.db
 agent-bot
+.env
+*.env.local

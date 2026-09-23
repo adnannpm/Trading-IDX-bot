@@ -1,6 +1,7 @@
 package database
 
 import (
+	"agent-bot/internal/config"
 	"agent-bot/internal/model"
 
 	"gorm.io/driver/sqlite"
@@ -10,7 +11,8 @@ import (
 var DB *gorm.DB
 
 func Connect() error {
-	db, err := gorm.Open(sqlite.Open("nusa.db"), &gorm.Config{})
+	dbPath := config.Get().DatabasePath
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return err
 	}

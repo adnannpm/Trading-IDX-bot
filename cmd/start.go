@@ -3,6 +3,7 @@ package cmd
 import (
 	"agent-bot/internal/api"
 	"agent-bot/internal/bot"
+	"agent-bot/internal/config"
 	"agent-bot/internal/database"
 	"agent-bot/internal/service"
 	"context"
@@ -56,7 +57,7 @@ var startCmd = &cobra.Command{
 		defer cancel()
 
 		// Menjalankan API Server lokal untuk menerima webhook/request dari Laravel
-		go api.StartServer(ctx, ":8080")
+		go api.StartServer(ctx, config.Get().APIPort)
 
 		// Menjalankan poller status user
 		go bot.StartStatusPoller(ctx, service.PollInterval)

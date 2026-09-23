@@ -37,11 +37,11 @@ func TestCommandDefinitions(t *testing.T) {
 	if !ok {
 		t.Fatal("missing /scan command")
 	}
-	if len(scan.Options) != 3 {
-		t.Fatalf("expected 3 subcommands for /scan, got %d", len(scan.Options))
+	if len(scan.Options) != 4 {
+		t.Fatalf("expected 4 subcommands for /scan, got %d", len(scan.Options))
 	}
-	subNames := []string{scan.Options[0].Name, scan.Options[1].Name, scan.Options[2].Name}
-	expectedSubs := []string{"ara", "arb", "all"}
+	subNames := []string{scan.Options[0].Name, scan.Options[1].Name, scan.Options[2].Name, scan.Options[3].Name}
+	expectedSubs := []string{"ara", "arb", "momentum", "all"}
 	for i, name := range subNames {
 		if name != expectedSubs[i] {
 			t.Errorf("expected subcommand %s at index %d, got %s", expectedSubs[i], i, name)
@@ -71,7 +71,7 @@ func TestStockSymbol(t *testing.T) {
 		{"jkse", "IHSG", true},
 		{"^JKSE", "IHSG", true},
 		{"", "", false},
-		{"A", "A", false}, // too short (< 2 chars)
+		{"A", "A", false},
 		{"INVALID!@#", "INVALID!@#", false},
 		{"   TLKM   ", "TLKM", true},
 	}
@@ -85,7 +85,6 @@ func TestStockSymbol(t *testing.T) {
 }
 
 func TestStockChoices(t *testing.T) {
-	// Query starting with BB
 	choices := stockChoices("BB")
 	if len(choices) == 0 {
 		t.Fatal("expected choices for BB, got none")
@@ -96,13 +95,11 @@ func TestStockChoices(t *testing.T) {
 		}
 	}
 
-	// Empty query returns up to 25 items
 	all := stockChoices("")
 	if len(all) != 25 {
 		t.Errorf("expected 25 choices for empty query, got %d", len(all))
 	}
 
-	// Non-matching query
 	none := stockChoices("ZZZZ")
 	if len(none) != 0 {
 		t.Errorf("expected 0 choices for ZZZZ, got %d", len(none))
@@ -135,7 +132,6 @@ func TestRefreshComponents(t *testing.T) {
 }
 
 func TestHandleRefreshCustomIDParsing(t *testing.T) {
-	// CustomID not starting with stock_refresh: should return false
 	nonRefreshInteraction := &discordgo.InteractionCreate{
 		Interaction: &discordgo.Interaction{
 			Type: discordgo.InteractionMessageComponent,

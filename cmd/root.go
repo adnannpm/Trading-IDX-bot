@@ -7,8 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 var rootCmd = &cobra.Command{
 	Use:   "agent-bot",
 	Short: "A brief description of your application",
@@ -29,5 +27,3 @@ func Execute() {
 
 func init() {
 }
-
-
